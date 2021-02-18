@@ -507,6 +507,16 @@ class GerberPlot extends JPanel implements Runnable {
     }
     return p;
   }
+	
+	private int numberStartIndex (String cmd, int pstart) {
+		int p;
+		for (p = pstart; p < cmd.length(); p++) {
+			char cc = cmd.charAt(p);
+			if (Character.isDigit(cc)  || cc != '-' || cc != '+' || cc != '.')
+				break;
+		}
+		return p;
+	}
 
   /**
    * Takes a numeric string representing a floating point value with no decimal point and
@@ -550,8 +560,16 @@ class GerberPlot extends JPanel implements Runnable {
           int nl = numberEndIndex(cmd, 3);
           int pd = Integer.parseInt(cmd.substring(3, nl));
           int te = cmd.indexOf(',', nl);
-          String type = cmd.substring(nl, te);
-          cmd = cmd.substring(te + 1);
+          
+          String type = "";
+          if(te == -1) { 
+			te = numberStartIndex(cmd, nl);
+			type = cmd.substring(nl);
+			cmd = "";
+          }else {
+    	    type = cmd.substring(nl, te);
+    	    cmd = cmd.substring(te+1);
+          }
           if (type.length() > 1) {
             // Process one, or more Aperture primitives defined in a Macro
             List<Double> aParms = new ArrayList<>();
@@ -955,7 +973,8 @@ class GerberPlot extends JPanel implements Runnable {
       double aDia = dW(app.parms.get(2));
       double aX = dX(app.parms.get(3));
       double aY = dY(app.parms.get(4));
-      double rot = app.parms.get(5);  // Rotation pointless for circle, but spec includes it...
+      double rot = 0;
+      if(app.parms.size() > 5) app.parms.get(5);  // Rotation pointless for circle, but spec includes it...
       Shape circle = new Ellipse2D.Double(aX - aDia / 2, aY - aDia / 2, aDia, aDia);
       AffineTransform at = new AffineTransform();
       at.translate(x1, y1);
@@ -977,13 +996,13 @@ class GerberPlot extends JPanel implements Runnable {
       // Note: coded to spec (4.5.4.5) , but untested
       int coords = app.parms.get(2).intValue() + 1; // Includes start point again at end
       Path2D.Double outline = new Path2D.Double();
-      for (int ii = 0; ii < coords; ii += 2) {
-        if (ii == 0) {
-          outline.moveTo(dX(app.parms.get(ii + 3)), dY(app.parms.get(ii + 4)));
-        } else {
-          outline.lineTo(dX(app.parms.get(ii + 3)), dY(app.parms.get(ii + 4)));
-        }
-      }
+      for (int ii = 0; ii < coords; ii++) {
+  		if (ii == 0) {
+			outline.moveTo(dX(app.parms.get((ii*2) + 3)), dY(app.parms.get((ii*2) + 4)));
+		} else {
+			outline.lineTo(dX(app.parms.get((ii*2) + 3)), dY(app.parms.get((ii*2) + 4)));
+		}
+	  }
       double rot = app.parms.get(5 + (coords - 1) * 2);
       outline.closePath();
       AffineTransform at = new AffineTransform();
